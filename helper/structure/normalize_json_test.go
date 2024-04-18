@@ -92,3 +92,38 @@ func TestNormalizeJsonString_invalid(t *testing.T) {
 		t.Fatalf("Got:\n\n%s\n\nExpected:\n\n%s\n", expected, invalidJson)
 	}
 }
+
+func TestNormalizeJsonString_arrayConversion(t *testing.T) {
+	// Single-element array should be converted to string to conform to AWS behavior
+	t.Run("SingleElementArrayToString", func(t *testing.T) {
+		singleElementArrayJson := `{
+    "Resource": ["arn:aws:iam::123456789012:root"]
+}`
+		expected := `{"Resource":"arn:aws:iam::123456789012:root"}`
+
+		actual, err := NormalizeJsonString(singleElementArrayJson)
+		if err != nil {
+			t.Fatalf("Expected not to throw an error while parsing JSON, but got: %s", err)
+		}
+
+		if actual != expected {
+			t.Fatalf("NormalizeJsonString did not convert single-element array to string. Got:\n\n%s\n\nExpected:\n\n%s\n", actual, expected)
+		}
+	})
+
+	t.Run("MultipleElementArrayRemainsArray", func(t *testing.T) {
+		multiElementArrayJson := `{
+    "Resource": ["arn:aws:iam::123456789012:root", "arn:aws:iam::123456789012:user/user123"]
+}`
+		expectedMulti := `{"Resource":["arn:aws:iam::123456789012:root","arn:aws:iam::123456789012:user/user123"]}`
+
+		actualMulti, errMulti := NormalizeJsonString(multiElementArrayJson)
+		if errMulti != nil {
+			t.Fatalf("Expected not to throw an error while parsing JSON, but got: %s", errMulti)
+		}
+
+		if actualMulti != expectedMulti {
+			t.Fatalf("Multiple-element array should not be converted to string. Got:\n\n%s\n\nExpected:\n\n%s\n", actualMulti, expectedMulti)
+		}
+	})
+}

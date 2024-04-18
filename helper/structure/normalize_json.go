@@ -22,6 +22,28 @@ func NormalizeJsonString(jsonString interface{}) (string, error) {
 		return s, err
 	}
 
-	bytes, _ := json.Marshal(j)
+	// Recursively convert single-element arrays to single elements
+	var simplifySingleElementArrays func(data interface{}) interface{}
+	simplifySingleElementArrays = func(data interface{}) interface{} {
+		switch x := data.(type) {
+		case []interface{}:
+			if len(x) == 1 {
+				return simplifySingleElementArrays(x[0]) // Return the single element, further simplified
+			}
+			for i, v := range x {
+				x[i] = simplifySingleElementArrays(v) // Apply the same simplification to each element
+			}
+		case map[string]interface{}:
+			for k, v := range x {
+				x[k] = simplifySingleElementArrays(v) // Apply simplification recursively to each value
+			}
+		}
+		return data
+	}
+
+	// Apply the simplification
+	simplifiedJson := simplifySingleElementArrays(j)
+
+	bytes, err := json.Marshal(simplifiedJson)
 	return string(bytes[:]), nil
 }
